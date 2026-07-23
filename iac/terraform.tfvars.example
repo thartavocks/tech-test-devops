@@ -1,0 +1,8 @@
+project_id = "your-gcp-project-id"
+region     = "asia-southeast2"
+
+db_name     = "appdb"
+db_user     = "appuser"
+db_password = "ChangeMe123!"
+
+container_image = "gcr.io/your-project/hello-world:latest"
