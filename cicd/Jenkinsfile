@@ -1,0 +1,72 @@
+pipeline {
+    agent any
+
+    environment {
+        PROJECT_ID  = "your-gcp-project-id"
+        REGION      = "asia-southeast2"
+        REPOSITORY  = "hello-world"
+        IMAGE_NAME  = "hello-world"
+        SERVICE_NAME = "hello-world"
+
+        IMAGE = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${IMAGE_NAME}:${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                    docker build -t ${IMAGE} ./cicd/app
+                """
+            }
+        }
+
+        stage('Authenticate to GCP') {
+            steps {
+                withCredentials([file(credentialsId: 'gcp-service-account', variable: 'GCP_KEY')]) {
+                    sh """
+                        gcloud auth activate-service-account --key-file=$GCP_KEY
+                        gcloud config set project ${PROJECT_ID}
+                        gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
+                    """
+                }
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh """
+                    docker push ${IMAGE}
+                """
+            }
+        }
+
+        stage('Deploy to Cloud Run') {
+            steps {
+                sh """
+                    gcloud run deploy ${SERVICE_NAME} \
+                    --image=${IMAGE} \
+                    --region=${REGION} \
+                    --platform=managed \
+                    --allow-unauthenticated
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Deployment completed successfully."
+        }
+
+        failure {
+            echo "Pipeline failed."
+        }
+    }
+}
