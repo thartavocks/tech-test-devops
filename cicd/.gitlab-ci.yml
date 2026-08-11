@@ -1,0 +1,39 @@
+stages:
+  - deploy
+  - notify
+
+deploy_main:
+  stage: deploy
+  tags:
+    - airtime-product
+    - master
+
+  only:
+    - master
+
+  script:
+    - cd /Data/airtime/fe-airtime
+    - git pull origin master
+    - docker exec airtime-fe php artisan optimize:clear
+
+notify_failure:
+  stage: notify
+  tags:
+    - airtime-product
+    - master
+
+  script:
+    - |
+      MESSAGE="🚨 Pipeline FAILED
+
+      Project: ${CI_PROJECT_NAME}
+      Branch: ${CI_COMMIT_REF_NAME}
+      Author: ${GITLAB_USER_NAME}
+      Commit: ${CI_COMMIT_TITLE}
+      Pipeline: ${CI_PIPELINE_URL}"
+
+      curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=${MESSAGE}"
+
+  when: on_failure
