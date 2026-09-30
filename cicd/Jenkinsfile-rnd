@@ -1,0 +1,24 @@
+pipeline {
+    agent any
+
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+    }
+
+    post {
+        success {
+            echo "Testing Pipeline completed successfully."
+        }
+
+        failure {
+            echo "Testing Pipeline failed."
+        }
+    }
+}
